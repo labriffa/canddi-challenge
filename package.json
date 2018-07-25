@@ -1,0 +1,22 @@
+{
+  "name": "canddichallenge",
+  "version": "1.0.0",
+  "description": "A Node.js based web-scraper that when given an email address scrapes the corresponding domain to aggregate relevant information on the business/site in question such as additional email addresses, phone numbers and postal addresses.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labriffa/canddi-challenge.git"
+  },
+  "keywords": [
+    "scraper"
+  ],
+  "author": "Lewis Alberto Briffa",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/labriffa/canddi-challenge/issues"
+  },
+  "homepage": "https://github.com/labriffa/canddi-challenge#readme"
+}
