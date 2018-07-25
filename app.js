@@ -15,7 +15,7 @@ const EmailLib = require('./utilities/EmailLib');
 
 const options = {
 	method: 'GET',
-	uri: 'http://www.thomaswillmax.co.uk/contact-us/'
+	uri: 'https://www.canddi.com/contact/'
 };
 
 request(options)
@@ -44,7 +44,11 @@ request(options)
 
 		// combine both international and non-international numbers
 		const uniqPhones = [...new Set([...uniqInternationalPhonesSet, ...uniqPhonesSet])];
+
+		const ADDRESS_REGEX = /\d{1,3}.?\d{0,3}\s[a-zA-Z]{2,30}\s[a-zA-Z]{2,15}.+(([G][I][R] 0[A]{2})|((([A-Z][0-9]{1,2})|(([A-Z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Z][0-9][A-Z])|([A-Z][A-Ha-hJ-Yj-y][0-9]?[A-Z]))))\s?[0-9][A-Z]{2}))/g;
+		const places = [...new Set(cheerio.load(response).text().match(ADDRESS_REGEX))];
+
 	})
-	.catch((error) => {
-		console.log('Unable to parse');
+	.catch((err) => {
+		console.log(err.error);
 	});
