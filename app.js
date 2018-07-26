@@ -7,7 +7,7 @@ const Knwl = require('knwl.js');
 const Crawler = require("simplecrawler");
 const url = require('url');
 
-// Configure Knwl
+// Configure Knwl -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 const knwlInstance = new Knwl('english');
 // Register experimental Knwl plugins
 knwlInstance.register('internationalPhones', require('./plugins/knwl/internationalPhones.js'));
@@ -20,24 +20,25 @@ const email = 'hello@canddi.com';
 const base = EmailLib.extractDomain(email);
 const domain = "http://www." + base;
 
-// Start web server
-var crawler = new Crawler(domain);
-crawler.maxDepth = 2;
-
-// Holds domain relevant information
+// Hold domain relevant information
 const domainInfoObj = {
 	emails: new Set(),
 	phones: new Set(),
 	places: new Set()
 };
 
+// Crawler
+var crawler = new Crawler(domain);
+crawler.maxDepth = 2;
+
+
 /**
-* Handles the crawling process
+* Handle the crawling process
 **/
 crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 
 	// convert body 
-    const body = responseBuffer.toString('utf8');
+    	const body = responseBuffer.toString('utf8');
    	const $ = cheerio.load(body);
 
 	// use lookaround based regex to remove the spaces between digits
@@ -80,7 +81,7 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 **/
 crawler.discoverResources = function(buffer, queueItem) {
 
-	const $ = cheerio.load(buffer.toString("utf8"));
+    const $ = cheerio.load(buffer.toString("utf8"));
 
     // Map anchor tags so that relative links are visited.
     // All other links are irrelevant as simplecrawler ignores urls
