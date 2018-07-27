@@ -4,12 +4,15 @@ A Node.js based web-scraper that when given an email address scrapes the corresp
 aggregate relevant information on the business/site in question 
 such as additional email addresses, phone numbers and postal addresses.
 
-![Alt text](https://res.cloudinary.com/dj7k0lade/image/upload/v1532563668/github/canddi-scraper.png "CANDDi Scraper")
+![Alt text](https://res.cloudinary.com/dj7k0lade/image/upload/v1532719592/canddi-scraper-company-house.png "CANDDi Scraper")
+
+## Features
+* Uses Companies House to fetch company data based on detected registration numbers
+* Crawls domain 2 levels deep
+* Attempts to crawl sitemaps
 
 ## Todos
-* Improve address extraction (look into libpostal)
 * Consider removing duplicated addresses
-* Check for a sitemap prior to scraping the domain to better cater for deep links
 
 ## Authors
 
