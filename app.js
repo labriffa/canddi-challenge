@@ -17,7 +17,14 @@ knwlInstance.register('internationalPhones', require('./plugins/knwl/internation
 const EmailLib = require('./utilities/EmailLib');
 
 // Email Domain -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-const email = 'hello@canddi.com';
+const email = process.argv[2];
+
+// Check validity of email address 
+if(!EmailLib.isValid(email)) {
+	console.log('Invalid email address');
+	process.exit();
+}
+
 const base = EmailLib.extractDomain(email);
 const domain = "http://www." + base;
 
@@ -31,12 +38,15 @@ let domainInfoObj = {
 	phones: new Set(),
 	places: new Set(),
 	postcodes: new Set(),
-	registeredName: '',
-	companyNumber: '',
-	companyType: '',
-	registeredAddress: '',
-	industries: new Set(),
 	titles: new Set(),
+
+	companyRegistration: {
+		registeredName: '',
+		companyNumber: '',
+		companyType: '',
+		registeredAddress: '',
+		industries: new Set(),
+	}
 };
 
 let possibleCompanyNumbers = new Set();
@@ -106,8 +116,11 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 	}
 
 	// Page Titles -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-	domainInfoObj.titles.add($('title').text()); 
-
+	const pageTitle = $('title').text();
+	if(pageTitle) {
+		domainInfoObj.titles.add($('title').text()); 
+	}
+	
 	console.log('Scraping Page: ' + $('title').text());
 });
 
@@ -151,20 +164,26 @@ crawler.on("complete", function() {
 
 		        // cross reference collated postcodes with company house data
 		        if(domainInfoObj.postcodes.has(company.registered_office_address.postal_code)) {
-		        	domainInfoObj.registeredName = company.company_name;
-			        domainInfoObj.companyNumber = company.company_number;
-			        domainInfoObj.registeredAddress = company.registered_office_address;
-			        const sicCodes = company.sic_codes;
 
+		        	let companyRegistration = domainInfoObj.companyRegistration;
+
+		        	companyRegistration.registeredName = company.company_name;
+			        companyRegistration.companyNumber = company.company_number;
+			        companyRegistration.registeredAddress = company.registered_office_address;
+
+			        // add industry type
+			        const sicCodes = company.sic_codes;
 			        for(let i = 0; i < sicCodes.length; i++) {
+
+			        	// cross reference industry number with available sic codes
 			        	const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
 						sicCodesList.forEach((sicCodeObj) => {
 							if(sicCodeObj.sic_code == sicCodes[i]) {
-								domainInfoObj.industries.add(sicCodeObj.sic_description);
+								companyRegistration.industries.add(sicCodeObj.sic_description);
 							}
 						});
 			        }
-			        domainInfoObj.companyType = company.type;
+			        companyRegistration.companyType = company.type;
 		        }       
 
 		        displayResults();
