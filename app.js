@@ -8,7 +8,7 @@ const url = require('url');
 const request = require('request');
 const fs = require('fs');
 
-// Configure Knwl
+// Configure Knwl -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 const knwlInstance = new Knwl('english');
 // Register experimental Knwl plugins
 knwlInstance.register('internationalPhones', require('./plugins/knwl/internationalPhones.js'));
@@ -40,14 +40,17 @@ let domainInfoObj = {
 };
 
 let possibleCompanyNumbers = new Set();
+// Crawler
+var crawler = new Crawler(domain);
+crawler.maxDepth = 2;
 
 /**
-* Handles the crawling process
+* Handle the crawling process
 **/
 crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 
 	// convert body 
-    const body = responseBuffer.toString('utf8');
+    	const body = responseBuffer.toString('utf8');
    	const $ = cheerio.load(body);
 
 	// use lookaround based regex to remove the spaces between digits
@@ -113,7 +116,7 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 **/
 crawler.discoverResources = function(buffer, queueItem) {
 
-	const $ = cheerio.load(buffer.toString("utf8"));
+    const $ = cheerio.load(buffer.toString("utf8"));
 
     // Map anchor tags so that relative links are visited.
     // All other links are irrelevant as simplecrawler ignores urls
