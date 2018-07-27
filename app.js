@@ -1,11 +1,12 @@
 'use strict';
 
 // Dependencies -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-const request = require('request-promise');
 const cheerio = require('cheerio');
 const Knwl = require('knwl.js');
 const Crawler = require("simplecrawler");
 const url = require('url');
+const request = require('request');
+const fs = require('fs');
 
 // Configure Knwl
 const knwlInstance = new Knwl('english');
@@ -25,11 +26,20 @@ var crawler = new Crawler(domain);
 crawler.maxDepth = 2;
 
 // Holds domain relevant information
-const domainInfoObj = {
+let domainInfoObj = {
 	emails: new Set(),
 	phones: new Set(),
-	places: new Set()
+	places: new Set(),
+	postcodes: new Set(),
+	registeredName: '',
+	companyNumber: '',
+	companyType: '',
+	registeredAddress: '',
+	industries: new Set(),
+	titles: new Set(),
 };
+
+let possibleCompanyNumbers = new Set();
 
 /**
 * Handles the crawling process
@@ -73,6 +83,29 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 			domainInfoObj.places.add(places[i]);
 		}
 	}
+
+	// Postcodes -=-=-=-=-=-=-=-=--=-=-=-=-=-=-=
+	const POSTCODE_REGEX = /(([G][I][R] 0[A]{2})|((([A-Z][0-9]{1,2})|(([A-Z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Z][0-9][A-Z])|([A-Z][A-Ha-hJ-Yj-y][0-9]?[A-Z]))))\s?[0-9][A-Z]{2}))/g;
+	const postcodes = cheerio.load(body).text().match(POSTCODE_REGEX);
+	if(postcodes) {
+		for(var i = 0; i < postcodes.length; i++) {
+			domainInfoObj.postcodes.add(postcodes[i]);
+		}
+	}
+
+	// Company Reg No. -=-=-=-=-=-=-=-=-=-=-=-=-=
+	const COMPANY_NO_REGEX = /[0-9]{8}/g;
+	const companyRegNo = cheerio.load(body).text().match(COMPANY_NO_REGEX);
+	if(companyRegNo) {
+		for(var i = 0; i < companyRegNo.length; i++) {
+			possibleCompanyNumbers.add(companyRegNo[i]);
+		}
+	}
+
+	// Page Titles -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+	domainInfoObj.titles.add($('title').text()); 
+
+	console.log('Scraping Page: ' + $('title').text());
 });
 
 /**
@@ -97,8 +130,59 @@ crawler.discoverResources = function(buffer, queueItem) {
 };
 
 crawler.on("complete", function() {
-	console.log(domainInfoObj);
+
+	// fetch company house data for each possible company house number
+	if(possibleCompanyNumbers) {
+
+		possibleCompanyNumbers.forEach((number) => {
+		const options = {
+		    url: 'https://api.companieshouse.gov.uk/company/' + number,
+		    auth: {
+		        'user': process.env.API_COMPANIES_HOUSE_KEY,
+		    }
+		};
+
+		function callback(error, response, body) {
+		    if (!error && response.statusCode == 200) {
+		        const company = JSON.parse(body);
+
+		        // cross reference collated postcodes with company house data
+		        if(domainInfoObj.postcodes.has(company.registered_office_address.postal_code)) {
+		        	domainInfoObj.registeredName = company.company_name;
+			        domainInfoObj.companyNumber = company.company_number;
+			        domainInfoObj.registeredAddress = company.registered_office_address;
+			        const sicCodes = company.sic_codes;
+
+			        for(let i = 0; i < sicCodes.length; i++) {
+			        	const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
+						sicCodesList.forEach((sicCodeObj) => {
+							if(sicCodeObj.sic_code == sicCodes[i]) {
+								domainInfoObj.industries.add(sicCodeObj.sic_description);
+							}
+						});
+			        }
+			        domainInfoObj.companyType = company.type;
+		        }       
+
+		        displayResults();
+		    }
+		}
+
+			request(options, callback);
+
+		});
+	} else {
+		displayResults();
+	}
 });
+
+function displayResults() {
+	console.log('\n\n\n/ Final Scraping -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n');
+	console.log(domainInfoObj);
+	console.log('\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- / Final Scraping ');
+}
 
 // Start the crawling process
 crawler.start();
+// Try crawling sitemap
+crawler.queueURL(domain + '/sitemap');
