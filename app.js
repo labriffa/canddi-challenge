@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 const Knwl = require('knwl.js');
 const Crawler = require("simplecrawler");
 const url = require('url');
-const request = require('request');
+const request = require('request-promise');
 const fs = require('fs');
 
 // Configure Knwl -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -15,6 +15,9 @@ knwlInstance.register('internationalPhones', require('./plugins/knwl/internation
 
 // Utilities -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 const EmailLib = require('./utilities/EmailLib');
+const PhoneLib = require('./utilities/PhoneLib');
+const PlaceLib = require('./utilities/PlaceLib');
+const CompanyLib = require('./utilities/CompanyLib');
 
 // Email Domain -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 const email = process.argv[2];
@@ -59,68 +62,28 @@ crawler.maxDepth = 2;
 **/
 crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 
-	// convert body 
-    	const body = responseBuffer.toString('utf8');
+	// Convert body 
+    const body = responseBuffer.toString('utf8');
    	const $ = cheerio.load(body);
 
-	// use lookaround based regex to remove the spaces between digits
+	// Use lookaround based regex to remove the spaces between digits
 	const text = $.text().replace(/(?<=\d) +(?=\d)/g, '');
 
 	knwlInstance.init(text);		
 
-	// Emails -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-	const emails = knwlInstance.get('emails').map(({ address }) => address);
-	for(let i = 0; i < emails.length; i++) { 
-		domainInfoObj.emails.add(emails[i]); 
-	}
-
-
-	// International Phone Numbers -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-	const internationalPhones = knwlInstance.get('internationalPhones').map(({ number }) => number);
-	for(let i = 0; i < internationalPhones.length; i++) { 
-		domainInfoObj.phones.add(internationalPhones[i]); 
-	}
-
-
-	// Try Interpreting Non-Internationalized Numbers -=-=-=-=-=-=-=-=-=-=-
-	const phones = knwlInstance.get('phones').map(({ phone }) => phone);
-	for(let i = 0; i < phones.length; i++) {
-		domainInfoObj.phones.add(phones[i]); 
-	}
-
-	// Places -=-=-=-=-=-=-=-=-=-=-
-	const ADDRESS_REGEX = /\d{1,3}.?\d{0,3}\s[a-zA-Z]{2,30}\s[A-Z]{1}[a-zA-Z]{1,15}.+(([G][I][R] 0[A]{2})|((([A-Z][0-9]{1,2})|(([A-Z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Z][0-9][A-Z])|([A-Z][A-Ha-hJ-Yj-y][0-9]?[A-Z]))))\s?[0-9][A-Z]{2}))/g;
-	const places = cheerio.load(body).text().match(ADDRESS_REGEX);
-	if(places) {
-		for(var i = 0; i < places.length; i++) {
-			domainInfoObj.places.add(places[i]);
-		}
-	}
-
-	// Postcodes -=-=-=-=-=-=-=-=--=-=-=-=-=-=-=
-	const POSTCODE_REGEX = /(([G][I][R] 0[A]{2})|((([A-Z][0-9]{1,2})|(([A-Z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Z][0-9][A-Z])|([A-Z][A-Ha-hJ-Yj-y][0-9]?[A-Z]))))\s?[0-9][A-Z]{2}))/g;
-	const postcodes = cheerio.load(body).text().match(POSTCODE_REGEX);
-	if(postcodes) {
-		for(var i = 0; i < postcodes.length; i++) {
-			domainInfoObj.postcodes.add(postcodes[i]);
-		}
-	}
-
-	// Company Reg No. -=-=-=-=-=-=-=-=-=-=-=-=-=
-	const COMPANY_NO_REGEX = /[0-9]{8}/g;
-	const companyRegNo = cheerio.load(body).text().match(COMPANY_NO_REGEX);
-	if(companyRegNo) {
-		for(var i = 0; i < companyRegNo.length; i++) {
-			possibleCompanyNumbers.add(companyRegNo[i]);
-		}
-	}
+	// Extract -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+	EmailLib.extractEmails(knwlInstance, domainInfoObj);
+	PhoneLib.extractInternationalPhones(knwlInstance, domainInfoObj);
+	PhoneLib.extractPhones(knwlInstance, domainInfoObj);
+	PlaceLib.extractPlaces(cheerio.load(body).text(), domainInfoObj);
+	PlaceLib.extractPostcodes(cheerio.load(body).text(), domainInfoObj);
+	CompanyLib.extractCompanyRegNumbers(text, possibleCompanyNumbers);	
 
 	// Page Titles -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 	const pageTitle = $('title').text();
-	if(pageTitle) {
-		domainInfoObj.titles.add($('title').text()); 
-	}
+	if(pageTitle) { domainInfoObj.titles.add($('title').text()); }
 	
+	// Crawler Progress -=-=-=-=-=-=-=-=-=-=-=-=-
 	console.log('Scraping Page: ' + $('title').text());
 });
 
@@ -146,52 +109,52 @@ crawler.discoverResources = function(buffer, queueItem) {
 };
 
 crawler.on("complete", function() {
-
 	// fetch company house data for each possible company house number
 	if(possibleCompanyNumbers) {
 
+		// fetch company house data for each reg no. found
 		possibleCompanyNumbers.forEach((number) => {
-		const options = {
-		    url: 'https://api.companieshouse.gov.uk/company/' + number,
-		    auth: {
-		        'user': process.env.API_COMPANIES_HOUSE_KEY,
-		    }
-		};
 
-		function callback(error, response, body) {
-		    if (!error && response.statusCode == 200) {
-		        const company = JSON.parse(body);
+			// load in sic code dataset
+			const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
 
-		        // cross reference collated postcodes with company house data
-		        if(domainInfoObj.postcodes.has(company.registered_office_address.postal_code)) {
+			var options = {
+			    url: 'https://api.companieshouse.gov.uk/company/' + number,
+				auth: {
+					'user': process.env.API_COMPANIES_HOUSE_KEY,
+				},
+				transform: function(body) {
+					return JSON.parse(body);
+				},
+				transform2xxOnly: true
+			};
 
-		        	let companyRegistration = domainInfoObj.companyRegistration;
+			request(options)
+			    .then(function (company) {
+			    	
+			    		// cross reference collated postcodes with company house data
+				        if(domainInfoObj.postcodes.has(company.registered_office_address.postal_code)) {
+				        	domainInfoObj.companyRegistration.registeredName = company.company_name;
+					        domainInfoObj.companyRegistration.companyNumber = company.company_number;
+					        domainInfoObj.companyRegistration.registeredAddress = company.registered_office_address;
+					        domainInfoObj.companyRegistration.companyType = company.type;
 
-		        	companyRegistration.registeredName = company.company_name;
-			        companyRegistration.companyNumber = company.company_number;
-			        companyRegistration.registeredAddress = company.registered_office_address;
-
-			        // add industry type
-			        const sicCodes = company.sic_codes;
-			        for(let i = 0; i < sicCodes.length; i++) {
-
-			        	// cross reference industry number with available sic codes
-			        	const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
-						sicCodesList.forEach((sicCodeObj) => {
-							if(sicCodeObj.sic_code == sicCodes[i]) {
-								companyRegistration.industries.add(sicCodeObj.sic_description);
-							}
-						});
-			        }
-			        companyRegistration.companyType = company.type;
-		        }       
-
-		        displayResults();
-		    }
-		}
-
-			request(options, callback);
-
+					        // add industry type
+					        company.sic_codes.forEach((sicCode) => {
+								sicCodesList.forEach((sicCodeObj) => {
+									if(sicCodeObj.sic_code == sicCode) {
+										domainInfoObj.companyRegistration.industries.add(sicCodeObj.sic_description);
+									}
+								});
+					        });
+					    
+					        
+					        displayResults();
+					        
+				        }    
+			    	
+			    })
+			  .catch(function (err) { console.log(''); });
 		});
 	} else {
 		displayResults();
