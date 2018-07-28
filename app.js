@@ -47,10 +47,6 @@ let domainInfoObj = {
 
 let possibleCompanyNumbers = new Set();
 
-// Crawler
-var crawler = new Crawler(domain);
-crawler.maxDepth = 2;
-
 /**
 * Handle the crawling process
 **/
@@ -119,13 +115,13 @@ crawler.on("complete", function() {
 				// cross reference collated postcodes with company house data
 				if(domainInfoObj.postcodes.has(companyRegistration.registeredAddress.postal_code)) {
 
-					console.log('Registration Details:');
+					console.log('registration_details:');
 					console.log(companyRegistration);
 
 					// using this reg no. try to find the associated officers
 					companyHouseApi.searchOfficers(number, (companyOfficers) => {
 						companyOfficers.forEach((officer, i) => {
-							console.log(`Officer ${i + 1}:`);
+							console.log(`officer_${i + 1}:`);
 							console.dir(officer);
 						})
 					});
