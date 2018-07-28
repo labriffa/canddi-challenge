@@ -33,7 +33,7 @@ const base = EmailLib.extractDomain(email);
 const domain = "http://www." + base;
 
 // Start web server
-var crawler = new Crawler(domain);
+let crawler = new Crawler(domain);
 crawler.maxDepth = 2;
 
 // Holds domain relevant information
@@ -46,6 +46,7 @@ let domainInfoObj = {
 };
 
 let possibleCompanyNumbers = new Set();
+
 // Crawler
 var crawler = new Crawler(domain);
 crawler.maxDepth = 2;

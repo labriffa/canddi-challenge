@@ -13,6 +13,12 @@ class CompanyHouseApi {
     this.apiKey = apiKey;
   }
 
+  /**
+    * Searches for a company on Companies House that corresponds to a given company number
+    *
+    * @param  {string}    company number
+    * @param  {function}  a callback upon success
+  **/
   searchCompany(id, success) {
     // load in sic code dataset
     const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
@@ -56,6 +62,12 @@ class CompanyHouseApi {
       .catch(function (err) { console.log(''); });
   }
 
+  /**
+    * Searches for company officers on Companies House that corresponds to a given company number
+    *
+    * @param  {string}    company number
+    * @param  {function}  a callback upon success
+  **/
   searchOfficers(id, success) {
     let options = {
       url: this.baseUrl + '/company/' + id + '/officers',
