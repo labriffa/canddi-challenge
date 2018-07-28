@@ -37,6 +37,12 @@ API_COMPANIES_HOUSE_KEY={API_KEY} node app.js hello@canddi.com
 ## Todos
 * Consider removing duplicated addresses
 
+## Dependencies
+* Cheerio
+* Knwl.js
+* Request-Promise
+* SimpleCrawler
+
 ## Authors
 
 * **Lewis Alberto Briffa**
