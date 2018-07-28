@@ -6,6 +6,27 @@ such as additional email addresses, phone numbers and postal addresses.
 
 ![Alt text](http://res.cloudinary.com/dj7k0lade/image/upload/v1532737224/canddi-crawler.png "CANDDi Scraper")
 
+## Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development purposes.
+
+### Installing
+
+Windows/OS X/Linux
+
+```
+https://github.com/labriffa/canddi-challenge.git
+npm install
+```
+
+### Running the Application
+
+The application makes use of the Companies House API and as such expects a valid Companies House API Key to provided on script execution.
+
+```
+API_COMPANIES_HOUSE_KEY={API_KEY} node app.js hello@canddi.com
+```
+
 ## Features
 * Uses Companies House to fetch company data based on detected registration numbers
 * Uses Companies House to fetch corresponding officers 
