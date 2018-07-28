@@ -4,7 +4,7 @@ A Node.js based web-scraper that when given an email address scrapes the corresp
 aggregate relevant information on the business/site in question 
 such as additional email addresses, phone numbers and postal addresses.
 
-![Alt text](http://res.cloudinary.com/dj7k0lade/image/upload/v1532737224/canddi-crawler.png "CANDDi Scraper")
+![Alt text](https://res.cloudinary.com/dj7k0lade/image/upload/v1532739636/github/canddi-crawl.png "CANDDi Scraper")
 
 ## Getting Started
 
@@ -30,6 +30,7 @@ API_COMPANIES_HOUSE_KEY={API_KEY} node app.js hello@canddi.com
 ## Features
 * Uses Companies House to fetch company data based on detected registration numbers
 * Uses Companies House to fetch corresponding officers 
+* Uses a SIC dataset to fetch SIC descriptions for each returned Company House SIC code
 * Crawls domains 2 levels deep
 * Attempts to crawl sitemaps
 
