@@ -8,7 +8,8 @@ such as additional email addresses, phone numbers and postal addresses.
 
 ## Features
 * Uses Companies House to fetch company data based on detected registration numbers
-* Crawls domain 2 levels deep
+* Uses Companies House to fetch corresponding officers 
+* Crawls domains 2 levels deep
 * Attempts to crawl sitemaps
 
 ## Todos
