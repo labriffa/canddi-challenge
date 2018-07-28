@@ -21,7 +21,7 @@ npm install
 
 ### Running the Application
 
-The application makes use of the Companies House API and as such expects a valid Companies House API Key to provided on script execution.
+The application makes use of the Companies House API and as such requires a valid Companies House API Key to be provided as an environment variable.
 
 ```
 API_COMPANIES_HOUSE_KEY={API_KEY} node app.js hello@canddi.com
