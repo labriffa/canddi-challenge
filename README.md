@@ -30,6 +30,7 @@ API_COMPANIES_HOUSE_KEY={API_KEY} node app.js hello@canddi.com
 ## Features
 * Uses Companies House to fetch company data based on detected registration numbers
 * Uses Companies House to fetch corresponding officers 
+* Uses a SIC dataset to fetch SIC descriptions for each returned Company House SIC code
 * Crawls domains 2 levels deep
 * Attempts to crawl sitemaps
 
