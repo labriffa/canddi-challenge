@@ -5,8 +5,6 @@ const cheerio = require('cheerio');
 const Knwl = require('knwl.js');
 const Crawler = require("simplecrawler");
 const url = require('url');
-const request = require('request-promise');
-const fs = require('fs');
 
 // Configure Knwl -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 const knwlInstance = new Knwl('english');
@@ -18,6 +16,9 @@ const EmailLib = require('./utilities/EmailLib');
 const PhoneLib = require('./utilities/PhoneLib');
 const PlaceLib = require('./utilities/PlaceLib');
 const CompanyLib = require('./utilities/CompanyLib');
+
+// Services -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+const CompanyHouseApi = require('./services/CompanyHouseApi');
 
 // Email Domain -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 const email = process.argv[2];
@@ -41,15 +42,7 @@ let domainInfoObj = {
 	phones: new Set(),
 	places: new Set(),
 	postcodes: new Set(),
-	titles: new Set(),
-
-	companyRegistration: {
-		registeredName: '',
-		companyNumber: '',
-		companyType: '',
-		registeredAddress: '',
-		industries: new Set(),
-	}
+	crawled: new Set()
 };
 
 let possibleCompanyNumbers = new Set();
@@ -81,7 +74,7 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 
 	// Page Titles -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 	const pageTitle = $('title').text();
-	if(pageTitle) { domainInfoObj.titles.add($('title').text()); }
+	if(pageTitle) { domainInfoObj.crawled.add($('title').text()); }
 	
 	// Crawler Progress -=-=-=-=-=-=-=-=-=-=-=-=-
 	console.log('Scraping Page: ' + $('title').text());
@@ -98,74 +91,48 @@ crawler.discoverResources = function(buffer, queueItem) {
     // All other links are irrelevant as simplecrawler ignores urls
     // from different domains
     return $("a[href]").map(function () {
-    	const pat = /^https?:\/\//i;
-    	if(!pat.test($(this).attr('href'))) {
-    		return domain + $(this).attr("href");
-    	} else {
-    		return $(this).attr("href");
-    	}
+    	const protcolPat = /^https?:\/\//i;
+
+    	// if this is an absolute url just return, else concat the 
+    	// base name and relative link
+    	return protcolPat.test($(this).attr('href')) 
+    		? $(this).attr("href")
+    		: domain + $(this).attr("href"); 
         
     }).get();
 };
 
 crawler.on("complete", function() {
+
+	console.log('\n\n\n/ Final Scraping -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n');
+	console.log(domainInfoObj);
+
 	// fetch company house data for each possible company house number
 	if(possibleCompanyNumbers) {
 
+		const companyHouseApi = new CompanyHouseApi(process.env.API_COMPANIES_HOUSE_KEY);
+
 		// fetch company house data for each reg no. found
 		possibleCompanyNumbers.forEach((number) => {
+			companyHouseApi.searchCompany(number, (companyRegistration) => {
+				// cross reference collated postcodes with company house data
+				if(domainInfoObj.postcodes.has(companyRegistration.registeredAddress.postal_code)) {
 
-			// load in sic code dataset
-			const sicCodesList = JSON.parse(fs.readFileSync('sicCodes.json', 'utf8'));
+					console.log('Registration Details:');
+					console.log(companyRegistration);
 
-			var options = {
-			    url: 'https://api.companieshouse.gov.uk/company/' + number,
-				auth: {
-					'user': process.env.API_COMPANIES_HOUSE_KEY,
-				},
-				transform: function(body) {
-					return JSON.parse(body);
-				},
-				transform2xxOnly: true
-			};
-
-			request(options)
-			    .then(function (company) {
-			    	
-			    		// cross reference collated postcodes with company house data
-				        if(domainInfoObj.postcodes.has(company.registered_office_address.postal_code)) {
-				        	domainInfoObj.companyRegistration.registeredName = company.company_name;
-					        domainInfoObj.companyRegistration.companyNumber = company.company_number;
-					        domainInfoObj.companyRegistration.registeredAddress = company.registered_office_address;
-					        domainInfoObj.companyRegistration.companyType = company.type;
-
-					        // add industry type
-					        company.sic_codes.forEach((sicCode) => {
-								sicCodesList.forEach((sicCodeObj) => {
-									if(sicCodeObj.sic_code == sicCode) {
-										domainInfoObj.companyRegistration.industries.add(sicCodeObj.sic_description);
-									}
-								});
-					        });
-					    
-					        
-					        displayResults();
-					        
-				        }    
-			    	
-			    })
-			  .catch(function (err) { console.log(''); });
+					// using this reg no. try to find the associated officers
+					companyHouseApi.searchOfficers(number, (companyOfficers) => {
+						companyOfficers.forEach((officer, i) => {
+							console.log(`Officer ${i + 1}:`);
+							console.dir(officer);
+						})
+					});
+				}
+			});
 		});
-	} else {
-		displayResults();
-	}
+	} 
 });
-
-function displayResults() {
-	console.log('\n\n\n/ Final Scraping -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n');
-	console.log(domainInfoObj);
-	console.log('\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- / Final Scraping ');
-}
 
 // Start the crawling process
 crawler.start();
