@@ -4,7 +4,6 @@
 const cheerio = require('cheerio');
 const Knwl = require('knwl.js');
 const Crawler = require("simplecrawler");
-const url = require('url');
 
 // Configure Knwl -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 const knwlInstance = new Knwl('english');
@@ -45,7 +44,7 @@ let domainInfoObj = {
 	crawled: new Set()
 };
 
-let possibleCompanyNumbers = new Set();
+let possibleCompanyRegistrationNumbers = new Set();
 
 /**
 * Handle the crawling process
@@ -67,7 +66,7 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 	PhoneLib.extractPhones(knwlInstance, domainInfoObj);
 	PlaceLib.extractPlaces(cheerio.load(body).text(), domainInfoObj);
 	PlaceLib.extractPostcodes(cheerio.load(body).text(), domainInfoObj);
-	CompanyLib.extractCompanyRegNumbers(text, possibleCompanyNumbers);	
+	CompanyLib.extractCompanyRegNumbers(text, possibleCompanyRegistrationNumbers);	
 
 	// Page Titles -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 	const pageTitle = $('title').text();
@@ -88,11 +87,11 @@ crawler.discoverResources = function(buffer, queueItem) {
     // All other links are irrelevant as simplecrawler ignores urls
     // from different domains
     return $("a[href]").map(function () {
-    	const protcolPat = /^https?:\/\//i;
+    	const protocolPattern = /^https?:\/\//i;
 
     	// if this is an absolute url just return, else concat the 
     	// base name and relative link
-    	return protcolPat.test($(this).attr('href')) 
+    	return protocolPattern.test($(this).attr('href')) 
     		? $(this).attr("href")
     		: domain + $(this).attr("href"); 
         
@@ -104,13 +103,12 @@ crawler.on("complete", function() {
 	console.log('\n\n\n/ Final Scraping -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n');
 	console.log(domainInfoObj);
 
-	// fetch company house data for each possible company house number
-	if(possibleCompanyNumbers) {
+	if(possibleCompanyRegistrationNumbers) {
 
 		const companyHouseApi = new CompanyHouseApi(process.env.API_COMPANIES_HOUSE_KEY);
 
 		// fetch company house data for each reg no. found
-		possibleCompanyNumbers.forEach((number) => {
+		possibleCompanyRegistrationNumbers.forEach((number) => {
 			companyHouseApi.searchCompany(number, (companyRegistration) => {
 				// cross reference collated postcodes with company house data
 				if(domainInfoObj.postcodes.has(companyRegistration.registeredAddress.postal_code)) {

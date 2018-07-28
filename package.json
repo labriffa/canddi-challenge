@@ -22,10 +22,7 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
     "knwl.js": "^1.0.2",
-    "phoneformat.js": "^1.0.6",
-    "request": "^2.87.0",
     "request-promise": "^4.2.2",
-    "simplecrawler": "^1.1.6",
-    "url": "^0.11.0"
+    "simplecrawler": "^1.1.6"
   }
 }

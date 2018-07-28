@@ -26,7 +26,7 @@ class PlaceLib {
   /**
   * Extracts postcodes using a given text corpus
   *
-  * @param  {object}  text corpus
+  * @param  {string}  text corpus
   * @param  {object}  a given object to push postcodes to
   **/
   static extractPostcodes(text, obj) {

@@ -34,7 +34,7 @@ class EmailLib {
   	* Detect whether or not an email address is valid 
   	*
   	* @param  {string}  the email address in question
-  	* @return {string}  whether the email is valid
+  	* @return {boolean}  whether the email is valid
   	**/
 	static isValid(email) {
     	return EMAIL_REGEX.test(email);
